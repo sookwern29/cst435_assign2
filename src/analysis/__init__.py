@@ -113,33 +113,63 @@ def plot_comparison(seq_time, data_mp, data_futures, task_mp, task_futures):
     task_mp_speedups = [s for _, _, s, _ in task_mp]
     task_futures_speedups = [s for _, _, s, _ in task_futures]
 
-    # Plot execution times
-    plt.figure(figsize=(12, 5))
+    data_mp_efficiency = [e * 100 for _, _, _, e in data_mp]
+    data_futures_efficiency = [e * 100 for _, _, _, e in data_futures]
+    task_mp_efficiency = [e * 100 for _, _, _, e in task_mp]
+    task_futures_efficiency = [e * 100 for _, _, _, e in task_futures]
 
-    plt.subplot(1, 2, 1)
-    plt.plot(counts, data_mp_times, label='Data MP', marker='o')
-    plt.plot(counts, data_futures_times, label='Data Futures', marker='s')
-    plt.plot(counts, task_mp_times, label='Task MP', marker='^')
-    plt.plot(counts, task_futures_times, label='Task Futures', marker='d')
-    plt.axhline(y=seq_time, color='r', linestyle='--', label='Sequential')
-    plt.xlabel('Number of Workers/Processes')
-    plt.ylabel('Execution Time (s)')
-    plt.title('Execution Time Comparison')
-    plt.legend()
-    plt.grid(True)
+    # Create figure with 3 subplots
+    plt.figure(figsize=(18, 5))
 
-    # Plot speedups
-    plt.subplot(1, 2, 2)
-    plt.plot(counts, data_mp_speedups, label='Data MP', marker='o')
-    plt.plot(counts, data_futures_speedups, label='Data Futures', marker='s')
-    plt.plot(counts, task_mp_speedups, label='Task MP', marker='^')
-    plt.plot(counts, task_futures_speedups, label='Task Futures', marker='d')
-    plt.xlabel('Number of Workers/Processes')
-    plt.ylabel('Speedup')
-    plt.title('Speedup Comparison')
-    plt.legend()
-    plt.grid(True)
+    # Plot 1: Execution Times
+    plt.subplot(1, 3, 1)
+    plt.plot(counts, data_mp_times, label='Data MP', marker='o', linewidth=2, markersize=8)
+    plt.plot(counts, data_futures_times, label='Data Futures', marker='s', linewidth=2, markersize=8)
+    plt.plot(counts, task_mp_times, label='Task MP', marker='^', linewidth=2, markersize=8)
+    plt.plot(counts, task_futures_times, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    plt.axhline(y=seq_time, color='r', linestyle='--', linewidth=1.5, alpha=0.7, label='Sequential')
+    plt.xlabel('Number of Workers/Processes', fontsize=11)
+    plt.ylabel('Execution Time (s)', fontsize=11)
+    plt.title('Execution Time Comparison', fontsize=12, fontweight='bold')
+    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.xticks(counts)
 
+    # Plot 2: Speedup
+    plt.subplot(1, 3, 2)
+    plt.plot(counts, data_mp_speedups, label='Data MP', marker='o', linewidth=2, markersize=8)
+    plt.plot(counts, data_futures_speedups, label='Data Futures', marker='s', linewidth=2, markersize=8)
+    plt.plot(counts, task_mp_speedups, label='Task MP', marker='^', linewidth=2, markersize=8)
+    plt.plot(counts, task_futures_speedups, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    # Set y-axis limits based on actual data range for better visibility
+    all_speedups = data_mp_speedups + data_futures_speedups + task_mp_speedups + task_futures_speedups
+    min_speedup = min(all_speedups)
+    max_speedup = max(all_speedups)
+    y_margin = (max_speedup - min_speedup) * 0.2  # 20% margin
+    plt.ylim(min_speedup - y_margin, max_speedup + y_margin)
+    plt.xlabel('Number of Workers/Processes', fontsize=11)
+    plt.ylabel('Speedup', fontsize=11)
+    plt.title('Speedup Comparison (Tserial / Tparallel)', fontsize=12, fontweight='bold')
+    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.xticks(counts)
+
+    # Plot 3: Efficiency
+    plt.subplot(1, 3, 3)
+    plt.plot(counts, data_mp_efficiency, label='Data MP', marker='o', linewidth=2, markersize=8)
+    plt.plot(counts, data_futures_efficiency, label='Data Futures', marker='s', linewidth=2, markersize=8)
+    plt.plot(counts, task_mp_efficiency, label='Task MP', marker='^', linewidth=2, markersize=8)
+    plt.plot(counts, task_futures_efficiency, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    plt.axhline(y=100, color='k', linestyle='--', linewidth=1.5, alpha=0.5, label='Ideal (100%)')
+    plt.xlabel('Number of Workers/Processes', fontsize=11)
+    plt.ylabel('Efficiency (%)', fontsize=11)
+    plt.title('Efficiency (Speedup / Cores × 100%)', fontsize=12, fontweight='bold')
+    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.xticks(counts)
+    plt.ylim(0, 110)
+
+    plt.suptitle('Parallel Image Processing Performance Analysis', fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     plt.savefig('performance_comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
