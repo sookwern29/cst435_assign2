@@ -62,7 +62,7 @@ def analyze_task_parallelism(images, seq_time):
 
     return results_mp, results_futures
 
-def print_detailed_comparison(data_mp, data_futures, task_mp, task_futures):
+def print_detailed_comparison(data_mp, data_futures, task_mp=None, task_futures=None):
     """Print a detailed comparison table."""
     print("\n=== Detailed Performance Comparison ===")
     print("Type\t\tLibrary\t\tWorkers\tTime (s)\tSpeedup\tEfficiency")
@@ -72,12 +72,13 @@ def print_detailed_comparison(data_mp, data_futures, task_mp, task_futures):
         print(f"Data\t\tMultiprocessing\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
     for count, t, s, e in data_futures:
         print(f"Data\t\tFutures\t\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
-    for count, t, s, e in task_mp:
-        print(f"Task\t\tMultiprocessing\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
-    for count, t, s, e in task_futures:
-        print(f"Task\t\tFutures\t\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
+    if task_mp and task_futures:
+        for count, t, s, e in task_mp:
+            print(f"Task\t\tMultiprocessing\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
+        for count, t, s, e in task_futures:
+            print(f"Task\t\tFutures\t\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
 
-def save_results_to_excel(seq_time, data_mp, data_futures, task_mp, task_futures, filename="performance_results.xlsx"):
+def save_results_to_excel(seq_time, data_mp, data_futures, task_mp=None, task_futures=None, filename="performance_results.xlsx"):
     """Save all results to an Excel file."""
     data = {
         'Workers': [1, 2, 4, 8],
@@ -87,36 +88,39 @@ def save_results_to_excel(seq_time, data_mp, data_futures, task_mp, task_futures
         'Data_Futures_Time': [t for _, t, _, _ in data_futures],
         'Data_Futures_Speedup': [s for _, _, s, _ in data_futures],
         'Data_Futures_Efficiency': [e for _, _, _, e in data_futures],
-        'Task_MP_Time': [t for _, t, _, _ in task_mp],
-        'Task_MP_Speedup': [s for _, _, s, _ in task_mp],
-        'Task_MP_Efficiency': [e for _, _, _, e in task_mp],
-        'Task_Futures_Time': [t for _, t, _, _ in task_futures],
-        'Task_Futures_Speedup': [s for _, _, s, _ in task_futures],
-        'Task_Futures_Efficiency': [e for _, _, _, e in task_futures],
     }
+    if task_mp and task_futures:
+        data.update({
+            'Task_MP_Time': [t for _, t, _, _ in task_mp],
+            'Task_MP_Speedup': [s for _, _, s, _ in task_mp],
+            'Task_MP_Efficiency': [e for _, _, _, e in task_mp],
+            'Task_Futures_Time': [t for _, t, _, _ in task_futures],
+            'Task_Futures_Speedup': [s for _, _, s, _ in task_futures],
+            'Task_Futures_Efficiency': [e for _, _, _, e in task_futures],
+        })
     df = pd.DataFrame(data)
     df.to_excel(filename, index=False)
     print(f"\nResults saved to {filename}")
 
-def plot_comparison(seq_time, data_mp, data_futures, task_mp, task_futures):
+def plot_comparison(seq_time, data_mp, data_futures, task_mp=None, task_futures=None):
     """Generate line graphs comparing the methods."""
     counts = [1, 2, 4, 8]
 
     # Extract data
     data_mp_times = [t for _, t, _, _ in data_mp]
     data_futures_times = [t for _, t, _, _ in data_futures]
-    task_mp_times = [t for _, t, _, _ in task_mp]
-    task_futures_times = [t for _, t, _, _ in task_futures]
-
     data_mp_speedups = [s for _, _, s, _ in data_mp]
     data_futures_speedups = [s for _, _, s, _ in data_futures]
-    task_mp_speedups = [s for _, _, s, _ in task_mp]
-    task_futures_speedups = [s for _, _, s, _ in task_futures]
-
     data_mp_efficiency = [e * 100 for _, _, _, e in data_mp]
     data_futures_efficiency = [e * 100 for _, _, _, e in data_futures]
-    task_mp_efficiency = [e * 100 for _, _, _, e in task_mp]
-    task_futures_efficiency = [e * 100 for _, _, _, e in task_futures]
+
+    if task_mp and task_futures:
+        task_mp_times = [t for _, t, _, _ in task_mp]
+        task_futures_times = [t for _, t, _, _ in task_futures]
+        task_mp_speedups = [s for _, _, s, _ in task_mp]
+        task_futures_speedups = [s for _, _, s, _ in task_futures]
+        task_mp_efficiency = [e * 100 for _, _, _, e in task_mp]
+        task_futures_efficiency = [e * 100 for _, _, _, e in task_futures]
 
     # Create figure with 3 subplots
     plt.figure(figsize=(18, 5))
@@ -125,8 +129,9 @@ def plot_comparison(seq_time, data_mp, data_futures, task_mp, task_futures):
     plt.subplot(1, 3, 1)
     plt.plot(counts, data_mp_times, label='Data MP', marker='o', linewidth=2, markersize=8)
     plt.plot(counts, data_futures_times, label='Data Futures', marker='s', linewidth=2, markersize=8)
-    plt.plot(counts, task_mp_times, label='Task MP', marker='^', linewidth=2, markersize=8)
-    plt.plot(counts, task_futures_times, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    if task_mp and task_futures:
+        plt.plot(counts, task_mp_times, label='Task MP', marker='^', linewidth=2, markersize=8)
+        plt.plot(counts, task_futures_times, label='Task Futures', marker='d', linewidth=2, markersize=8)
     plt.axhline(y=seq_time, color='r', linestyle='--', linewidth=1.5, alpha=0.7, label='Sequential')
     plt.xlabel('Number of Workers/Processes', fontsize=11)
     plt.ylabel('Execution Time (s)', fontsize=11)
@@ -139,10 +144,13 @@ def plot_comparison(seq_time, data_mp, data_futures, task_mp, task_futures):
     plt.subplot(1, 3, 2)
     plt.plot(counts, data_mp_speedups, label='Data MP', marker='o', linewidth=2, markersize=8)
     plt.plot(counts, data_futures_speedups, label='Data Futures', marker='s', linewidth=2, markersize=8)
-    plt.plot(counts, task_mp_speedups, label='Task MP', marker='^', linewidth=2, markersize=8)
-    plt.plot(counts, task_futures_speedups, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    if task_mp and task_futures:
+        plt.plot(counts, task_mp_speedups, label='Task MP', marker='^', linewidth=2, markersize=8)
+        plt.plot(counts, task_futures_speedups, label='Task Futures', marker='d', linewidth=2, markersize=8)
     # Set y-axis limits based on actual data range for better visibility
-    all_speedups = data_mp_speedups + data_futures_speedups + task_mp_speedups + task_futures_speedups
+    all_speedups = data_mp_speedups + data_futures_speedups
+    if task_mp and task_futures:
+        all_speedups += task_mp_speedups + task_futures_speedups
     min_speedup = min(all_speedups)
     max_speedup = max(all_speedups)
     y_margin = (max_speedup - min_speedup) * 0.2  # 20% margin
@@ -158,8 +166,9 @@ def plot_comparison(seq_time, data_mp, data_futures, task_mp, task_futures):
     plt.subplot(1, 3, 3)
     plt.plot(counts, data_mp_efficiency, label='Data MP', marker='o', linewidth=2, markersize=8)
     plt.plot(counts, data_futures_efficiency, label='Data Futures', marker='s', linewidth=2, markersize=8)
-    plt.plot(counts, task_mp_efficiency, label='Task MP', marker='^', linewidth=2, markersize=8)
-    plt.plot(counts, task_futures_efficiency, label='Task Futures', marker='d', linewidth=2, markersize=8)
+    if task_mp and task_futures:
+        plt.plot(counts, task_mp_efficiency, label='Task MP', marker='^', linewidth=2, markersize=8)
+        plt.plot(counts, task_futures_efficiency, label='Task Futures', marker='d', linewidth=2, markersize=8)
     plt.axhline(y=100, color='k', linestyle='--', linewidth=1.5, alpha=0.5, label='Ideal (100%)')
     plt.xlabel('Number of Workers/Processes', fontsize=11)
     plt.ylabel('Efficiency (%)', fontsize=11)
