@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # Unzip data.zip if it exists
     zip_path = os.path.join(os.path.dirname(__file__), "../data.zip")
     if os.path.exists(zip_path):
-        extract_to = os.path.join(os.path.dirname(__file__), "..")
+        extract_to = os.path.join(os.path.dirname(__file__), "../data")
         os.makedirs(extract_to, exist_ok=True)
         print(f"Unzipping {zip_path} to {extract_to}...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -31,25 +31,23 @@ if __name__ == '__main__':
             for file in tqdm(file_list, desc="Unzipping", unit="file"):
                 zip_ref.extract(file, extract_to)
         print("Unzipping complete.")
-        print("Contents of", extract_to, ":", os.listdir(extract_to))
+        print("Contents of data folder:", os.listdir(extract_to))
 
-    # Find all image directories
-    extract_to = os.path.join(os.path.dirname(__file__), "..")
-    data_dir = os.path.join(extract_to, 'data')
+    # Find all image directories in data/ folder
+    data_dir = os.path.join(os.path.dirname(__file__), "../data")
     image_dirs = []
+    
     if os.path.exists(data_dir):
         for item in os.listdir(data_dir):
             item_path = os.path.join(data_dir, item)
             if os.path.isdir(item_path):
                 # Check if it contains images
-                images_check = [f for f in os.listdir(item_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))]
-                if images_check:
-                    image_dirs.append(item_path)
-    else:
-        # Fallback
-        fallback_dir = os.path.join(os.path.dirname(__file__), "../data/waffles")
-        if os.path.exists(fallback_dir):
-            image_dirs = [fallback_dir]
+                try:
+                    images_check = [f for f in os.listdir(item_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))]
+                    if images_check:
+                        image_dirs.append(item_path)
+                except (PermissionError, FileNotFoundError):
+                    continue
 
     if not image_dirs:
         print("No image directories found.")
