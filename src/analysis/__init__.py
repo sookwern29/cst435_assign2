@@ -1,6 +1,6 @@
 from .parallelism_analysis import (
     data_parallelism_multiprocessing,
-    data_parallelism_futures,
+    data_parallelism_threading,
     task_parallelism_multiprocessing,
     task_parallelism_futures
 )
@@ -16,25 +16,31 @@ def analyze_data_parallelism(images, seq_time):
     counts = [1, 2, 4, 8]
     results_mp = []
     results_futures = []
+    all_logs_mp = []
+    all_logs_futures = []
 
     for count in counts:
         # Multiprocessing
         output_dir_mp = os.path.join(OUTPUT_BASE, f"data_mp_{count}")
-        time_mp = data_parallelism_multiprocessing(images, output_dir_mp, count)
+        time_mp, logs_mp = data_parallelism_multiprocessing(images, output_dir_mp, count)
         speedup_mp = seq_time / time_mp
         efficiency_mp = speedup_mp / count
         results_mp.append((count, time_mp, speedup_mp, efficiency_mp))
+        all_logs_mp.extend(logs_mp)  # Collect all logs
         print(f"Data MP ({count} processes): {time_mp:.4f}s, Speedup: {speedup_mp:.2f}, Efficiency: {efficiency_mp:.2f}")
 
-        # Futures
-        output_dir_futures = os.path.join(OUTPUT_BASE, f"data_futures_{count}")
-        time_futures = data_parallelism_futures(images, output_dir_futures, count)
+    for count in counts:
+        # Multithreading
+        output_dir_futures = os.path.join(OUTPUT_BASE, f"data_mt_{count}")
+        time_futures, logs_futures = data_parallelism_threading(images, output_dir_futures, count)
         speedup_futures = seq_time / time_futures
         efficiency_futures = speedup_futures / count
         results_futures.append((count, time_futures, speedup_futures, efficiency_futures))
-        print(f"Data Futures ({count} workers): {time_futures:.4f}s, Speedup: {speedup_futures:.2f}, Efficiency: {efficiency_futures:.2f}")
+        all_logs_futures.extend(logs_futures)  # Collect all logs
+        print(f"Data MT ({count} threads): {time_futures:.4f}s, Speedup: {speedup_futures:.2f}, Efficiency: {efficiency_futures:.2f}")
 
-    return results_mp, results_futures
+    return results_mp, results_futures, all_logs_mp, all_logs_futures
+    # return results_mp, all_logs_mp
 
 def analyze_task_parallelism(images, seq_time):
     """Analyze performance for task parallelism using both multiprocessing and futures."""
@@ -63,6 +69,7 @@ def analyze_task_parallelism(images, seq_time):
     return results_mp, results_futures
 
 def print_detailed_comparison(data_mp, data_futures, task_mp=None, task_futures=None):
+# def print_detailed_comparison(data_mp, task_mp=None, task_futures=None):
     """Print a detailed comparison table."""
     print("\n=== Detailed Performance Comparison ===")
     print("Type\t\tLibrary\t\tWorkers\tTime (s)\tSpeedup\tEfficiency")
@@ -78,7 +85,8 @@ def print_detailed_comparison(data_mp, data_futures, task_mp=None, task_futures=
         for count, t, s, e in task_futures:
             print(f"Task\t\tFutures\t\t{count}\t{t:.4f}\t{s:.2f}\t{e:.2f}")
 
-def save_results_to_excel(seq_time, data_mp, data_futures, task_mp=None, task_futures=None, filename="performance_results.xlsx"):
+def save_results_to_excel(seq_time, data_mp, data_futures, task_mp=None, task_futures=None, logs_mp=None, logs_futures=None, filename="performance_results.xlsx"):
+# def save_results_to_excel(seq_time, data_mp, task_mp=None, task_futures=None, logs_mp=None, filename="performance_results.xlsx"):
     """Save all results to an Excel file."""
     data = {
         'Workers': [1, 2, 4, 8],
@@ -99,10 +107,30 @@ def save_results_to_excel(seq_time, data_mp, data_futures, task_mp=None, task_fu
             'Task_Futures_Efficiency': [e for _, _, _, e in task_futures],
         })
     df = pd.DataFrame(data)
-    df.to_excel(filename, index=False)
+    
+    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Performance_Summary', index=False)
+        
+        if logs_mp:
+            logs_df = pd.DataFrame(logs_mp)
+            # Flatten counts dict if needed
+            if 'counts' in logs_df.columns:
+                counts_df = logs_df['counts'].apply(pd.Series)
+                logs_df = pd.concat([logs_df.drop('counts', axis=1), counts_df], axis=1)
+            logs_df.to_excel(writer, sheet_name='Multiprocessing_Logs', index=False)
+        
+        if logs_futures:
+            logs_df = pd.DataFrame(logs_futures)
+            # Flatten counts dict if needed
+            if 'counts' in logs_df.columns:
+                counts_df = logs_df['counts'].apply(pd.Series)
+                logs_df = pd.concat([logs_df.drop('counts', axis=1), counts_df], axis=1)
+            logs_df.to_excel(writer, sheet_name='Threading_Logs', index=False)
+    
     print(f"\nResults saved to {filename}")
 
 def plot_comparison(seq_time, data_mp, data_futures, task_mp=None, task_futures=None):
+# def plot_comparison(seq_time, data_mp, task_mp=None, task_futures=None):
     """Generate line graphs comparing the methods."""
     counts = [1, 2, 4, 8]
 
