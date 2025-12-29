@@ -70,10 +70,25 @@ if __name__ == '__main__':
         print("No images found in any directory.")
         sys.exit(1)
 
-    # Run sequential baseline
+    # Run sequential baseline multiple times and take the best time to be fair
+    print("\n=== Running Sequential Baseline ===")
     seq_output = os.path.join(OUTPUT_BASE, "sequential")
-    seq_time = run_sequential(all_images, seq_output)
-    print(f"Sequential baseline time: {seq_time:.4f} seconds")
+    
+    # Warmup run (not counted)
+    print("Warmup run...")
+    _ = run_sequential(all_images[:10], seq_output)  # Just process 10 images to warmup
+    
+    # Actual measurement - run 3 times and take median to avoid outliers
+    seq_times = []
+    for i in range(3):
+        print(f"Sequential run {i+1}/3...")
+        t = run_sequential(all_images, seq_output)
+        seq_times.append(t)
+        print(f"  Time: {t:.4f}s")
+    
+    seq_time = sorted(seq_times)[1]  # Take median
+    print(f"\nSequential baseline time (median): {seq_time:.4f} seconds")
+    print(f"  (Min: {min(seq_times):.4f}s, Max: {max(seq_times):.4f}s)")
 
     # Analyze data parallelism with both libraries
     data_mp_results, data_futures_results = analyze_data_parallelism(all_images, seq_time)
