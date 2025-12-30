@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import zipfile
+from cv2 import log
 from tqdm import tqdm
 
 # Add src directory to path for proper imports
@@ -23,7 +24,7 @@ if __name__ == '__main__':
     # Unzip data.zip if it exists
     zip_path = os.path.join(os.path.dirname(__file__), "../data.zip")
     if os.path.exists(zip_path):
-        extract_to = os.path.join(os.path.dirname(__file__), "..")
+        extract_to = os.path.join(os.path.dirname(__file__), "../data")
         os.makedirs(extract_to, exist_ok=True)
         print(f"Unzipping {zip_path} to {extract_to}...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -31,25 +32,23 @@ if __name__ == '__main__':
             for file in tqdm(file_list, desc="Unzipping", unit="file"):
                 zip_ref.extract(file, extract_to)
         print("Unzipping complete.")
-        print("Contents of", extract_to, ":", os.listdir(extract_to))
+        print("Contents of data folder:", os.listdir(extract_to))
 
-    # Find all image directories
-    extract_to = os.path.join(os.path.dirname(__file__), "..")
-    data_dir = os.path.join(extract_to, 'data')
+    # Find all image directories in data/ folder
+    data_dir = os.path.join(os.path.dirname(__file__), "../data")
     image_dirs = []
+    
     if os.path.exists(data_dir):
         for item in os.listdir(data_dir):
             item_path = os.path.join(data_dir, item)
             if os.path.isdir(item_path):
                 # Check if it contains images
-                images_check = [f for f in os.listdir(item_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))]
-                if images_check:
-                    image_dirs.append(item_path)
-    else:
-        # Fallback
-        fallback_dir = os.path.join(os.path.dirname(__file__), "../data/waffles")
-        if os.path.exists(fallback_dir):
-            image_dirs = [fallback_dir]
+                try:
+                    images_check = [f for f in os.listdir(item_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))]
+                    if images_check:
+                        image_dirs.append(item_path)
+                except (PermissionError, FileNotFoundError):
+                    continue
 
     if not image_dirs:
         print("No image directories found.")
@@ -76,8 +75,9 @@ if __name__ == '__main__':
     
     # Warmup run (not counted)
     print("Warmup run...")
-    _ = run_sequential(all_images[:10], seq_output)  # Just process 10 images to warmup
-    
+    warmup_time = run_sequential(all_images, seq_output)  # Process all images to warmup
+    print(f"  Time: {warmup_time:.4f}s")
+
     # Actual measurement - run 3 times and take median to avoid outliers
     seq_times = []
     for i in range(3):
@@ -91,7 +91,8 @@ if __name__ == '__main__':
     print(f"  (Min: {min(seq_times):.4f}s, Max: {max(seq_times):.4f}s)")
 
     # Analyze data parallelism with both libraries
-    data_mp_results, data_futures_results = analyze_data_parallelism(all_images, seq_time)
+    data_mp_results, data_futures_results, logs_mp, logs_futures = analyze_data_parallelism(all_images, seq_time)
+    # data_mp_results, logs_mp = analyze_data_parallelism(all_images, seq_time)
 
     # Analyze task parallelism with both libraries
     # task_mp_results, task_futures_results = analyze_task_parallelism(all_images, seq_time)
@@ -99,11 +100,14 @@ if __name__ == '__main__':
     # Print detailed comparison
     # print_detailed_comparison(data_mp_results, data_futures_results, task_mp_results, task_futures_results)
     print_detailed_comparison(data_mp_results, data_futures_results)
+    # print_detailed_comparison(data_mp_results)
 
     # Save results to Excel
     # save_results_to_excel(seq_time, data_mp_results, data_futures_results, task_mp_results, task_futures_results)
-    save_results_to_excel(seq_time, data_mp_results, data_futures_results)
+    save_results_to_excel(seq_time, data_mp_results, data_futures_results, logs_mp=logs_mp, logs_futures=logs_futures)
+    # save_results_to_excel(seq_time, data_mp_results, logs_mp=logs_mp)
 
     # Generate comparison plots
     # plot_comparison(seq_time, data_mp_results, data_futures_results, task_mp_results, task_futures_results)
     plot_comparison(seq_time, data_mp_results, data_futures_results)
+    # plot_comparison(seq_time, data_mp_results)
