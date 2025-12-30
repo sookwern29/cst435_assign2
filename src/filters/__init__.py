@@ -28,8 +28,8 @@ def sharpen(img):
 
 def adjust_brightness(img):
     """Adjust image brightness based on original image condition: increase if dark, decrease if bright"""
-    # Compute average brightness
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+    # Image is already grayscale at this point in the pipeline
+    gray = img if len(img.shape) == 2 else cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     mean_brightness = np.mean(gray)
     if mean_brightness < 128:
         beta = 30  # increase brightness for dark images
