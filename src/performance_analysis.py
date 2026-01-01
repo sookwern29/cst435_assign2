@@ -5,6 +5,10 @@ import zipfile
 from cv2 import log
 from tqdm import tqdm
 
+# Set matplotlib backend for headless environments (GCP, servers without display)
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+
 # Add src directory to path for proper imports
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -69,16 +73,10 @@ if __name__ == '__main__':
         print("No images found in any directory.")
         sys.exit(1)
 
-    # Run sequential baseline multiple times and take the best time to be fair
+    # Run sequential baseline 3 times and take median to avoid outliers
     print("\n=== Running Sequential Baseline ===")
     seq_output = os.path.join(OUTPUT_BASE, "sequential")
     
-    # Warmup run (not counted)
-    print("Warmup run...")
-    warmup_time = run_sequential(all_images, seq_output)  # Process all images to warmup
-    print(f"  Time: {warmup_time:.4f}s")
-
-    # Actual measurement - run 3 times and take median to avoid outliers
     seq_times = []
     for i in range(3):
         print(f"Sequential run {i+1}/3...")
