@@ -13,7 +13,7 @@ matplotlib.use('Agg')  # Use non-interactive backend
 sys.path.insert(0, os.path.dirname(__file__))
 
 from utils import process_image
-from analysis import analyze_data_parallelism, analyze_task_parallelism, print_detailed_comparison, save_results_to_excel, plot_comparison, plot_core_timeline
+from analysis import analyze_data_parallelism, analyze_task_parallelism, print_detailed_comparison, save_results_to_excel, plot_comparison, plot_core_timeline, plot_thread_core_usage
 
 IMAGE_DIR = os.path.join(os.path.dirname(__file__), "../data/waffles")
 OUTPUT_BASE = os.path.join(os.path.dirname(__file__), "../output")
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # Generate comparison plots
     plot_comparison(data_mp_results, data_futures_results)
     
-    # Generate timeline visualizations showing core usage (for 4 and 8 workers)
+    # Generate timeline visualizations showing core usage (for 8 workers)
     print("\n=== Generating Timeline Visualizations ===")
     from analysis import analyze_data_parallelism
     
@@ -103,5 +103,7 @@ if __name__ == '__main__':
     
     if logs_mp_8_workers:
         plot_core_timeline(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
+        plot_thread_core_usage(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
     if logs_mt_8_workers:
         plot_core_timeline(logs_mt_8_workers, 8, "Multithreading (8 Workers)")
+        plot_thread_core_usage(logs_mt_8_workers, 8, "Multithreading (8 Workers)")

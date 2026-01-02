@@ -286,3 +286,78 @@ def plot_core_timeline(logs, num_workers, method_name="Multiprocessing"):
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.show()
     print(f"Timeline visualization saved as {filename}")
+
+def plot_thread_core_usage(logs, num_workers, method_name="Multiprocessing"):
+    """Visualize which cores each worker/thread used."""
+    if not logs:
+        print("No logs available for thread-core visualization")
+        return
+    
+    # Filter out N/A core IDs
+    valid_logs = [log for log in logs if log.get('core_id') not in ['N/A', 'N/A (psutil not installed)', None]]
+    
+    if not valid_logs:
+        print(f"No valid core ID data available for {method_name} thread-core visualization")
+        return
+    
+    # Create a dictionary: worker_id -> list of cores used
+    worker_cores = {}
+    for log in valid_logs:
+        worker_id = log['chunk_id']
+        core_id = log['core_id']
+        if worker_id not in worker_cores:
+            worker_cores[worker_id] = []
+        if core_id not in worker_cores[worker_id]:
+            worker_cores[worker_id].append(core_id)
+    
+    # Sort workers and get all unique cores
+    workers = sorted(worker_cores.keys())
+    all_cores = sorted(set(core for cores in worker_cores.values() for core in cores))
+    
+    # Create matrix: rows=workers, cols=cores, value=1 if worker used that core
+    matrix = []
+    for worker in workers:
+        row = [1 if core in worker_cores[worker] else 0 for core in all_cores]
+        matrix.append(row)
+    
+    # Create horizontal bar chart
+    fig, ax = plt.subplots(figsize=(10, max(6, num_workers * 0.6)))
+    
+    # For each worker, create stacked bars showing which cores it used
+    colors = plt.cm.Set3(range(len(all_cores)))
+    core_color_map = {core: colors[i % 12] for i, core in enumerate(all_cores)}
+    
+    for i, worker in enumerate(workers):
+        cores_used = worker_cores[worker]
+        left = 0
+        for core in cores_used:
+            ax.barh(i, 1, left=left, height=0.8, 
+                   color=core_color_map[core],
+                   edgecolor='black', linewidth=0.5,
+                   label=f'Core {core}' if i == 0 else '')
+            # Add core label on the bar
+            ax.text(left + 0.5, i, str(core), 
+                   ha='center', va='center', fontsize=10, fontweight='bold')
+            left += 1
+    
+    # Formatting
+    ax.set_xlabel('Number of Different Cores Used', fontsize=12)
+    ax.set_ylabel('Worker/Thread ID', fontsize=12)
+    ax.set_title(f'{method_name}: Which CPU Cores Each Worker Used\n(Numbers show Core IDs)', 
+                 fontsize=13, fontweight='bold')
+    ax.set_yticks(range(len(workers)))
+    ax.set_yticklabels([f'Worker {w}' for w in workers])
+    ax.set_xlim(0, max(len(worker_cores[w]) for w in workers) + 0.5)
+    ax.grid(True, axis='x', alpha=0.3)
+    
+    # Add text summary on the right
+    for i, worker in enumerate(workers):
+        num_cores = len(worker_cores[worker])
+        ax.text(num_cores + 0.1, i, f'{num_cores} core(s)', 
+               va='center', fontsize=9, style='italic')
+    
+    plt.tight_layout()
+    filename = f'worker_core_usage_{method_name.lower().replace(" ", "_")}.png'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.show()
+    print(f"Worker-core usage visualization saved as {filename}")
