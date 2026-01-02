@@ -13,7 +13,7 @@ matplotlib.use('Agg')  # Use non-interactive backend
 sys.path.insert(0, os.path.dirname(__file__))
 
 from utils import process_image
-from analysis import analyze_data_parallelism, analyze_task_parallelism, print_detailed_comparison, save_results_to_excel, plot_comparison
+from analysis import analyze_data_parallelism, analyze_task_parallelism, print_detailed_comparison, save_results_to_excel, plot_comparison, plot_core_timeline
 
 IMAGE_DIR = os.path.join(os.path.dirname(__file__), "../data/waffles")
 OUTPUT_BASE = os.path.join(os.path.dirname(__file__), "../output")
@@ -88,3 +88,20 @@ if __name__ == '__main__':
 
     # Generate comparison plots
     plot_comparison(data_mp_results, data_futures_results)
+    
+    # Generate timeline visualizations showing core usage (for 4 and 8 workers)
+    print("\n=== Generating Timeline Visualizations ===")
+    from analysis import analyze_data_parallelism
+    
+    # Get logs for specific worker counts
+    _, _, logs_mp_8, _ = analyze_data_parallelism.__wrapped__ if hasattr(analyze_data_parallelism, '__wrapped__') else (None, None, logs_mp, logs_futures)
+    
+    # Plot timeline for 8 workers (most interesting to see core usage)
+    # Filter logs for 8-worker runs
+    logs_mp_8_workers = [log for log in logs_mp if log.get('chunk_id', -1) < 8]
+    logs_mt_8_workers = [log for log in logs_futures if log.get('chunk_id', -1) < 8]
+    
+    if logs_mp_8_workers:
+        plot_core_timeline(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
+    if logs_mt_8_workers:
+        plot_core_timeline(logs_mt_8_workers, 8, "Multithreading (8 Workers)")

@@ -230,3 +230,59 @@ def plot_comparison(data_mp, data_futures, task_mp=None, task_futures=None):
     plt.savefig('performance_comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Graph saved as performance_comparison.png")
+
+def plot_core_timeline(logs, num_workers, method_name="Multiprocessing"):
+    """Visualize which cores process which workers over time (Gantt chart style)."""
+    if not logs:
+        print("No logs available for timeline visualization")
+        return
+    
+    # Filter out N/A core IDs and prepare data
+    valid_logs = [log for log in logs if log.get('core_id') not in ['N/A', 'N/A (psutil not installed)', None]]
+    
+    if not valid_logs:
+        print(f"No valid core ID data available for {method_name} timeline visualization")
+        return
+    
+    # Normalize start times to start from 0
+    min_start = min(log['start_time'] for log in valid_logs)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(14, max(6, num_workers * 0.8)))
+    
+    # Get unique cores and assign colors
+    unique_cores = sorted(set(log['core_id'] for log in valid_logs))
+    colors = plt.cm.tab10(range(len(unique_cores)))
+    core_color_map = {core: colors[i % 10] for i, core in enumerate(unique_cores)}
+    
+    # Plot each chunk as a horizontal bar
+    for log in valid_logs:
+        chunk_id = log['chunk_id']
+        core_id = log['core_id']
+        start = log['start_time'] - min_start
+        duration = log['duration']
+        
+        ax.barh(chunk_id, duration, left=start, height=0.8, 
+                color=core_color_map[core_id], 
+                edgecolor='black', linewidth=0.5,
+                label=f'Core {core_id}' if core_id not in [l.get_label() for l in ax.get_children()] else "")
+    
+    # Formatting
+    ax.set_xlabel('Time (seconds)', fontsize=12)
+    ax.set_ylabel('Worker/Chunk ID', fontsize=12)
+    ax.set_title(f'{method_name}: Worker Execution Timeline by CPU Core\n(Colors = Different CPU Cores)', 
+                 fontsize=13, fontweight='bold')
+    ax.set_yticks(range(num_workers))
+    ax.set_yticklabels([f'Worker {i}' for i in range(num_workers)])
+    ax.grid(True, axis='x', alpha=0.3)
+    
+    # Create legend with unique cores only
+    handles = [plt.Rectangle((0,0),1,1, color=core_color_map[core]) for core in unique_cores]
+    labels = [f'Core {core}' for core in unique_cores]
+    ax.legend(handles, labels, loc='upper right', fontsize=9, title='CPU Cores')
+    
+    plt.tight_layout()
+    filename = f'timeline_{method_name.lower().replace(" ", "_")}.png'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.show()
+    print(f"Timeline visualization saved as {filename}")
