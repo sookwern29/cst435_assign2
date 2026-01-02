@@ -361,3 +361,65 @@ def plot_thread_core_usage(logs, num_workers, method_name="Multiprocessing"):
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.show()
     print(f"Worker-core usage visualization saved as {filename}")
+
+def plot_parallelism_over_time(logs, num_workers, method_name="Multiprocessing"):
+    """Visualize how many workers are actively executing at each point in time."""
+    if not logs:
+        print("No logs available for parallelism visualization")
+        return
+    
+    if not logs:
+        print(f"No logs available for {method_name} parallelism visualization")
+        return
+    
+    # Normalize start times to start from 0
+    min_start = min(log['start_time'] for log in logs)
+    max_end = max(log['end_time'] for log in logs)
+    total_duration = max_end - min_start
+    
+    # Sample time points
+    num_samples = 500
+    time_points = [min_start + (i * total_duration / num_samples) for i in range(num_samples + 1)]
+    active_workers = []
+    
+    # For each time point, count how many workers are active
+    for t in time_points:
+        count = sum(1 for log in logs if log['start_time'] <= t <= log['end_time'])
+        active_workers.append(count)
+    
+    # Normalize time to start from 0
+    time_points_normalized = [t - min_start for t in time_points]
+    
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(14, 6))
+    
+    ax.plot(time_points_normalized, active_workers, linewidth=2.5, color='#2E86AB')
+    ax.fill_between(time_points_normalized, active_workers, alpha=0.3, color='#2E86AB')
+    
+    # Add horizontal line showing ideal parallelism
+    ax.axhline(y=num_workers, color='green', linestyle='--', linewidth=2, 
+               alpha=0.7, label=f'Ideal: {num_workers} workers')
+    
+    # Formatting
+    ax.set_xlabel('Time (seconds)', fontsize=12)
+    ax.set_ylabel('Number of Active Workers', fontsize=12)
+    ax.set_title(f'{method_name}: Concurrency Level Over Time\n(Shows True Parallelism)', 
+                 fontsize=13, fontweight='bold')
+    ax.set_ylim(0, num_workers + 1)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=11)
+    
+    # Add statistics
+    avg_active = sum(active_workers) / len(active_workers)
+    max_active = max(active_workers)
+    
+    stats_text = f'Max concurrent: {max_active} workers\nAverage concurrent: {avg_active:.1f} workers'
+    ax.text(0.98, 0.97, stats_text, transform=ax.transAxes,
+            fontsize=10, verticalalignment='top', horizontalalignment='right',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.tight_layout()
+    filename = f'parallelism_over_time_{method_name.lower().replace(" ", "_")}.png'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.show()
+    print(f"Parallelism over time visualization saved as {filename}")
