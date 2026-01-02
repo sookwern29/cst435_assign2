@@ -73,39 +73,18 @@ if __name__ == '__main__':
         print("No images found in any directory.")
         sys.exit(1)
 
-    # Run sequential baseline 3 times and take median to avoid outliers
-    print("\n=== Running Sequential Baseline ===")
-    seq_output = os.path.join(OUTPUT_BASE, "sequential")
-    
-    seq_times = []
-    for i in range(3):
-        print(f"Sequential run {i+1}/3...")
-        t = run_sequential(all_images, seq_output)
-        seq_times.append(t)
-        print(f"  Time: {t:.4f}s")
-    
-    seq_time = sorted(seq_times)[1]  # Take median
-    print(f"\nSequential baseline time (median): {seq_time:.4f} seconds")
-    print(f"  (Min: {min(seq_times):.4f}s, Max: {max(seq_times):.4f}s)")
-
-    # Analyze data parallelism with both libraries
-    data_mp_results, data_futures_results, logs_mp, logs_futures = analyze_data_parallelism(all_images, seq_time)
+    # Analyze data parallelism with both libraries (using 1-core as baseline)
+    data_mp_results, data_futures_results, logs_mp, logs_futures = analyze_data_parallelism(all_images)
     # data_mp_results, logs_mp = analyze_data_parallelism(all_images, seq_time)
 
     # Analyze task parallelism with both libraries
     # task_mp_results, task_futures_results = analyze_task_parallelism(all_images, seq_time)
 
     # Print detailed comparison
-    # print_detailed_comparison(data_mp_results, data_futures_results, task_mp_results, task_futures_results)
     print_detailed_comparison(data_mp_results, data_futures_results)
-    # print_detailed_comparison(data_mp_results)
 
     # Save results to Excel
-    # save_results_to_excel(seq_time, data_mp_results, data_futures_results, task_mp_results, task_futures_results)
-    save_results_to_excel(seq_time, data_mp_results, data_futures_results, logs_mp=logs_mp, logs_futures=logs_futures)
-    # save_results_to_excel(seq_time, data_mp_results, logs_mp=logs_mp)
+    save_results_to_excel(data_mp_results, data_futures_results, logs_mp=logs_mp, logs_futures=logs_futures)
 
     # Generate comparison plots
-    # plot_comparison(seq_time, data_mp_results, data_futures_results, task_mp_results, task_futures_results)
-    plot_comparison(seq_time, data_mp_results, data_futures_results)
-    # plot_comparison(seq_time, data_mp_results)
+    plot_comparison(data_mp_results, data_futures_results)
