@@ -89,23 +89,14 @@ if __name__ == '__main__':
     # Generate comparison plots
     plot_comparison(data_mp_results, data_futures_results)
     
-    # Generate timeline visualizations showing core usage (for 8 workers)
-    print("\n=== Generating Timeline Visualizations ===")
-    from analysis import analyze_data_parallelism
+    # Generate parallelism visualizations (for 8 workers)
+    print("\n=== Generating Parallelism Visualizations ===")
     
-    # Get logs for specific worker counts
-    _, _, logs_mp_8, _ = analyze_data_parallelism.__wrapped__ if hasattr(analyze_data_parallelism, '__wrapped__') else (None, None, logs_mp, logs_futures)
-    
-    # Plot timeline for 8 workers (most interesting to see core usage)
     # Filter logs for 8-worker runs
     logs_mp_8_workers = [log for log in logs_mp if log.get('chunk_id', -1) < 8]
     logs_mt_8_workers = [log for log in logs_futures if log.get('chunk_id', -1) < 8]
     
     if logs_mp_8_workers:
-        plot_core_timeline(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
-        plot_thread_core_usage(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
         plot_parallelism_over_time(logs_mp_8_workers, 8, "Multiprocessing (8 Workers)")
     if logs_mt_8_workers:
-        plot_core_timeline(logs_mt_8_workers, 8, "Multithreading (8 Workers)")
-        plot_thread_core_usage(logs_mt_8_workers, 8, "Multithreading (8 Workers)")
         plot_parallelism_over_time(logs_mt_8_workers, 8, "Multithreading (8 Workers)")
